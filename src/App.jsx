@@ -51,14 +51,26 @@
 // export default App
 
 import React, { useState } from 'react'
+import Answers from './components/Answers'
 
 const App = () => {
   const [questions, setQuestions] = useState('')
-  const [answer, setAnswer] = useState('')
+  const [answer, setAnswer] = useState([])
+  const [recentHistory, setRecentHistory] = useState([])
 
   const API_KEY = "AIzaSyCbx2VvdFYNIr0oAEwWzdoIQXw83mrVDDc"
 
   const askQuestion = async () => {
+    if(localStorage.getItem('history')){
+      let history = JSON.parse(localStorage.getItem('history'));
+      history = [questions,...history]
+      localStorage.setItem('history',JSON.stringify(history)) 
+      // setRecentHistory(history)
+    }
+    else{
+      localStorage.setItem("history",JSON.stringify([questions]))
+      // setRecentHistory([questions])
+    }
     const URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${API_KEY}`
 
     const payload = {
@@ -83,10 +95,14 @@ const App = () => {
       })
 
       const data = await response.json()
-      console.log(data)
+      
 
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-      setAnswer(text || "No response")
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text
+      text=text.split("* ");
+      text=text.map((item)=>item.trim());
+      // text=text.join("\n- ");
+      console.log(text)
+      setAnswer([...answer,{type:"question", text: questions}, {type:"answer", text: text}])
     } catch (error) {
       console.error(error)
     }
@@ -98,8 +114,33 @@ const App = () => {
 
       <div className='col-span-4 p-10'>
         <div className='container h-120 mb-6 overflow-scroll'>
-          <div className='text-white'>
-            <p className='text-lg'>{answer}</p>
+          <div className='text-zinc-300'>
+            <ul>
+            {
+              answer.map((item, index) => (
+                <div key={index+Math.random()} className={item.type=="question"? "flex justify-end":""}>
+                  {
+                item.type === "question" ? 
+                <li key={index+Math.random()} className='p-1 text-right border-5 bg-zinc-700 border-zinc-700 rounded-tl-3xl rounded-br-3xl rounded-bl-3xl w-fit'>
+                  <Answers ans={item.text} totalResult={1} index={index} type={item.type}/>
+                </li>
+                : item.text.map((textItem, textIndex) => (
+                  <li key={textIndex+Math.random()} className='p-1'><Answers ans={textItem} totalResult={item.length} index={textIndex}/></li>
+                ))
+              }
+                </div>
+              ))
+            }
+            </ul>
+            {/* <ul>
+              
+              {
+                answer && answer.map((item,index)=>(
+                  <li key={index+Math.random()} className='p-1'><Answers ans={item} totalResult={answer.length} index={index}/></li>
+                ))
+              }
+              </ul> */}
+           
           </div>
           
         </div>
